@@ -60,40 +60,34 @@ class ResNeXtUNet(nn.Module):
         self.base_model = resnext50_32x4d(pretrained=True)
         self.base_layers = list(self.base_model.children())
         filters = [4 * 64, 4 * 128, 4 * 256, 4 * 512]
-
-        # Down
+        
         self.encoder0 = nn.Sequential(*self.base_layers[:3])
         self.encoder1 = nn.Sequential(*self.base_layers[4])
         self.encoder2 = nn.Sequential(*self.base_layers[5])
         self.encoder3 = nn.Sequential(*self.base_layers[6])
         self.encoder4 = nn.Sequential(*self.base_layers[7])
 
-        # Up
         self.decoder4 = DecoderBlock(filters[3], filters[2])
         self.decoder3 = DecoderBlock(filters[2], filters[1])
         self.decoder2 = DecoderBlock(filters[1], filters[0])
         self.decoder1 = DecoderBlock(filters[0], filters[0])
 
-        # Final Classifier
         self.last_conv0 = ConvRelu(256, 128, 3, 1)
         self.last_conv1 = nn.Conv2d(128, n_classes, 3, padding=1)
 
     def forward(self, x):
-        # Down
+        
         x = self.encoder0(x)
         e1 = self.encoder1(x)
         e2 = self.encoder2(e1)
         e3 = self.encoder3(e2)
         e4 = self.encoder4(e3)
 
-        # Up + sc
         d4 = self.decoder4(e4) + e3
         d3 = self.decoder3(d4) + e2
         d2 = self.decoder2(d3) + e1
         d1 = self.decoder1(d2)
-        # print(d1.shape)
-
-        # final classifier
+        
         out = self.last_conv0(d1)
         out = self.last_conv1(out)
         out = nn.Sigmoid()(out)
@@ -112,7 +106,7 @@ img = st.file_uploader("Upload the folder with the MRI Scans")
 if img is not None:
     img = bytearray(img.read())
     imgs = Image.open(io.BytesIO(img)).convert("RGB")
-    k = np.random.randint(35, 80)
+   
     img1 = Image.open(io.BytesIO(img)).convert("L")
     img = t.Resize((256, 256))(imgs)
 
@@ -139,4 +133,3 @@ if img is not None:
         """A brain MRI is one of the most commonly performed techniques of medical imaging. It enables clinicians to focus on various parts of the brain and examine their anatomy and pathology, using different MRI sequences, such as T1w, T2w, or FLAIR.
     MRI is used to analyze the anatomy of the brain and to identify some pathological conditions such as cerebrovascular incidents, demyelinating and neurodegenerative diseases. Moreover, the MRI can be used for examining the activity of the brain under specific activities (functional MRI - fMRI). The biggest advantage of MRI is that it uses no radiation. However, it takes longer to be produced than CT for example, which is why it’s not a primary imaging choice for urgent conditions."""
     )
-    st.header(f"Approximate mortailty Rate: {k}%")
